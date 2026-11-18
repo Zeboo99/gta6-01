@@ -3,17 +3,104 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Block Dodger</title>
+<title>Solmar City — Open-World Crime</title>
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #11141b; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #87b5d6; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
   #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  /* Read aloud, never shown: the status line screen readers announce. */
   #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* --- HUD --- */
+  #hud { display: none; position: fixed; inset: 0; pointer-events: none; color: #fff; }
+  #hud-top { position: absolute; top: 14px; left: 16px; display: flex; flex-direction: column; gap: 6px; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
+  #health-bar { width: 220px; height: 14px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.5); border-radius: 3px; overflow: hidden; }
+  #health-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71); transition: width .2s; }
+  #health-text { font-size: 12px; font-weight: 700; }
+  #stars { font-size: 26px; letter-spacing: 3px; }
+  #money { font-size: 22px; font-weight: 800; color: #7dff9e; }
+  #ammo { font-size: 14px; font-weight: 700; }
+  #objective-box { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); max-width: 560px; text-align: center; text-shadow: 0 1px 3px rgba(0,0,0,.8); }
+  #objective-label { font-size: 11px; letter-spacing: 2px; opacity: .85; }
+  #objective { font-size: 17px; font-weight: 700; }
+  #speed { position: absolute; right: 20px; bottom: 18px; font-size: 26px; font-weight: 800; text-shadow: 0 1px 3px rgba(0,0,0,.8); }
+  #minimap { position: absolute; right: 16px; top: 14px; width: 190px; height: 190px; border: 2px solid rgba(255,255,255,.6); border-radius: 4px; background: #20262b; }
+  #dialogue { display: none; position: absolute; left: 50%; bottom: 110px; transform: translateX(-50%); width: min(620px, 86vw); background: rgba(10,14,18,.82); border-left: 4px solid #f7c948; border-radius: 4px; padding: 12px 16px; }
+  #dialogue-name { color: #f7c948; font-weight: 800; font-size: 13px; letter-spacing: 1px; }
+  #dialogue-text { font-size: 15px; line-height: 1.45; margin-top: 4px; }
+  #toast { display: none; position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); background: rgba(10,14,18,.82); padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+  #crosshair { display: none; position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 4px rgba(0,0,0,.8); }
+  #controls-hint { position: absolute; left: 16px; bottom: 16px; font-size: 12px; line-height: 1.6; opacity: .9; text-shadow: 0 1px 3px rgba(0,0,0,.8); }
+
+  /* --- Full-screen screens --- */
+  .screen { display: none; position: fixed; inset: 0; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #fff; background: rgba(8, 20, 32, 0.55); z-index: 10; }
+  .screen h1 { font-size: 64px; margin: 0; letter-spacing: 6px; text-shadow: 0 4px 18px rgba(0,0,0,.8); }
+  .screen h1 .accent { color: #f7c948; }
+  .screen p { max-width: 560px; font-size: 16px; line-height: 1.55; margin: 18px 0 26px; text-shadow: 0 1px 4px rgba(0,0,0,.8); }
+  .screen button { pointer-events: auto; font-size: 18px; font-weight: 800; letter-spacing: 2px; color: #111; background: #f7c948; border: none; border-radius: 6px; padding: 14px 42px; cursor: pointer; }
+  .screen button:hover { background: #ffd95e; }
+  #menu { display: flex; background: linear-gradient(180deg, rgba(8,20,32,.25) 0%, rgba(8,20,32,.65) 100%); }
+  #menu .tagline { font-size: 13px; letter-spacing: 4px; color: #f7c948; font-weight: 700; margin-top: 8px; }
+  #menu .controls { font-size: 13px; opacity: .9; line-height: 1.9; margin-top: 26px; }
+  #end h1 { font-size: 56px; color: #ff5a4a; }
+  #pause h1 { font-size: 44px; }
 </style>
 </head>
 <body>
-<canvas id="game" aria-label="Block Dodger: move the paddle left and right to dodge falling blocks and catch coins"></canvas>
+<canvas id="game" aria-label="Solmar City: an open-world crime game. Walk and drive around the city, steal cars, outrun the police, and run missions for Maya."></canvas>
 <p id="status" role="status" aria-live="polite"></p>
-<script type="module" src="./src/main.js"></script>
+
+<div id="hud" aria-hidden="true">
+  <div id="hud-top">
+    <div id="health-bar"><div id="health-fill"></div></div>
+    <div id="health-text">100 HP</div>
+    <div id="stars">☆☆☆☆☆</div>
+    <div id="money">$250</div>
+    <div id="ammo">48 ammo</div>
+  </div>
+  <div id="objective-box">
+    <div id="objective-label">OBJECTIVE</div>
+    <div id="objective">Press M to start a mission</div>
+  </div>
+  <canvas id="minimap" width="190" height="190"></canvas>
+  <div id="speed">0 km/h</div>
+  <div id="dialogue"><div id="dialogue-name">Maya</div><div id="dialogue-text"></div></div>
+  <div id="toast"></div>
+  <div id="crosshair"></div>
+  <div id="controls-hint">WASD move &nbsp;·&nbsp; Shift run &nbsp;·&nbsp; Space jump<br>E enter / exit car &nbsp;·&nbsp; Right mouse aim &nbsp;·&nbsp; Left click punch / shoot<br>M mission &nbsp;·&nbsp; P pause &nbsp;·&nbsp; K save &nbsp;·&nbsp; N mute</div>
+</div>
+
+<div id="menu" class="screen">
+  <h1 id="menu-title">SOLMAR <span class="accent">CITY</span></h1>
+  <div class="tagline">AN OPEN-WORLD CRIME STORY</div>
+  <p id="menu-sub"></p>
+  <button id="menu-btn">START GAME</button>
+  <div class="controls">WASD move · Shift run · Space jump · E enter / exit car<br>Right mouse aim · Left click punch / shoot · M mission · P pause · K save</div>
+</div>
+
+<div id="pause" class="screen">
+  <h1>PAUSED</h1>
+  <p>Take a breath, Rico. Solmar waits.</p>
+  <button id="pause-btn">RESUME</button>
+</div>
+
+<div id="end" class="screen">
+  <h1 id="end-title">BUSTED</h1>
+  <p id="end-text"></p>
+  <button id="end-btn">Back to the streets</button>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.min.js"
+  }
+}
+</script>
+<script type="module">
+  import { Game } from './src/main.js';
+  const game = new Game();
+  game.start();
+  window.__game = game;
+  requestAnimationFrame((t) => game.tick(t));
+</script>
 </body>
 </html>
